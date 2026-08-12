@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: covenant-db
+    environment:
+      POSTGRES_USER: covenant
+      POSTGRES_PASSWORD: covenant
+      POSTGRES_DB: covenant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
