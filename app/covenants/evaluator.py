@@ -1,5 +1,7 @@
+"""Deterministic verdict: the only place actual is compared to threshold."""
+
 from app.covenants.calculation_pipeline import run_calculation
-from app.schemas.covenant import (
+from app.covenants.schemas import (
     ComplianceStatus,
     CovenantOperator,
     CovenantRule,
@@ -18,17 +20,11 @@ def _evaluate_status(
     if operator in (">=", ">"):
         if actual < threshold:
             return "breached"
-        upper_warning = threshold * (1 + warning_buffer)
-        if actual < upper_warning:
-            return "warning"
-        return "compliant"
+        return "warning" if actual < threshold * (1 + warning_buffer) else "compliant"
 
     if actual > threshold:
         return "breached"
-    lower_warning = threshold * (1 - warning_buffer)
-    if actual > lower_warning:
-        return "warning"
-    return "compliant"
+    return "warning" if actual > threshold * (1 - warning_buffer) else "compliant"
 
 
 def evaluate_actual(
@@ -38,8 +34,6 @@ def evaluate_actual(
     warning_buffer: float = DEFAULT_WARNING_BUFFER,
 ) -> EvaluationResult:
     """Compare a pre-computed actual value against the covenant threshold."""
-    status = _evaluate_status(actual, rule.threshold, rule.operator, warning_buffer)
-
     return EvaluationResult(
         name=rule.name,
         metric=rule.metric,
@@ -47,37 +41,46 @@ def evaluate_actual(
         operator=rule.operator,
         threshold=rule.threshold,
         actual=round(actual, 4),
-        status=status,
+        status=_evaluate_status(actual, rule.threshold, rule.operator, warning_buffer),
         inputs=inputs,
         currency=rule.currency,
         difference=round(actual - rule.threshold, 4),
     )
 
 
-def evaluate(rule: CovenantRule, data: dict[str, float], warning_buffer: float = DEFAULT_WARNING_BUFFER) -> EvaluationResult:
-    """
-    Full Pipeline 2: calculation → verdict.
+def undetermined(
+    rule: CovenantRule,
+    status: ComplianceStatus,
+    reason: str | None,
+    inputs: dict[str, float] | None = None,
+) -> EvaluationResult:
+    """Result for covenants that could not be measured — never a guessed verdict."""
+    return EvaluationResult(
+        name=rule.name,
+        metric=rule.metric,
+        source_text=rule.source_text,
+        operator=rule.operator,
+        threshold=rule.threshold,
+        actual=None,
+        status=status,
+        inputs=inputs or {},
+        currency=rule.currency,
+        reason=reason,
+    )
 
-    1. run_calculation(covenant, retrieved data) → actual
-    2. evaluate_actual(actual vs threshold) → compliant / warning / breached
-    """
-    calc = run_calculation(rule, data)
 
-    if calc.error or calc.actual is None:
-        status: ComplianceStatus = (
-            "insufficient_data" if calc.inputs and "Missing" in (calc.error or "") else "manual_review"
-        )
-        return EvaluationResult(
-            name=rule.name,
-            metric=rule.metric,
-            source_text=rule.source_text,
-            operator=rule.operator,
-            threshold=rule.threshold,
-            actual=None,
-            status=status,
-            inputs=calc.inputs,
-            currency=rule.currency,
-            reason=calc.error,
-        )
+async def evaluate(
+    rule: CovenantRule,
+    data: dict[str, float],
+    warning_buffer: float = DEFAULT_WARNING_BUFFER,
+) -> EvaluationResult:
+    """
+    Full Pipeline 2: LLM calculation → deterministic verdict.
+    """
+    calc = await run_calculation(rule, data)
+
+    if calc.actual is None:
+        status: ComplianceStatus = "insufficient_data" if not calc.inputs else "manual_review"
+        return undetermined(rule, status, calc.error, calc.inputs)
 
     return evaluate_actual(rule, calc.actual, calc.inputs, warning_buffer)

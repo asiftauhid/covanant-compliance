@@ -4,14 +4,12 @@ from app.ai.providers.base import Message
 from app.ai.providers.http_client import get_client
 from app.ai.schemas import InferenceMeta
 
-# Keeps the model resident between pipeline steps so it is not reloaded per call.
-KEEP_ALIVE = "10m"
 
-
-class OllamaProvider:
-    def __init__(self, base_url: str, model: str):
-        self.base_url = base_url.rstrip("/")
+class OpenAIProvider:
+    def __init__(self, api_key: str, model: str, base_url: str = "https://api.openai.com/v1"):
+        self.api_key = api_key
         self.model = model
+        self.base_url = base_url.rstrip("/")
 
     async def generate(
         self,
@@ -22,20 +20,23 @@ class OllamaProvider:
         payload = {
             "model": self.model,
             "messages": messages,
-            "stream": False,
-            "keep_alive": KEEP_ALIVE,
-            "options": {"num_predict": max_tokens, "temperature": 0.1},
+            "max_tokens": max_tokens,
+            "temperature": 0.1,
         }
         if json_mode:
-            payload["format"] = "json"
+            payload["response_format"] = {"type": "json_object"}
 
         start = time.perf_counter()
-        response = await get_client().post(f"{self.base_url}/api/chat", json=payload)
+        response = await get_client().post(
+            f"{self.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json=payload,
+        )
         response.raise_for_status()
         data = response.json()
 
-        return data["message"]["content"].strip(), InferenceMeta(
+        return data["choices"][0]["message"]["content"].strip(), InferenceMeta(
             model=self.model,
             inference_ms=int((time.perf_counter() - start) * 1000),
-            provider="ollama",
+            provider="openai",
         )

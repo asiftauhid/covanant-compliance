@@ -1,4 +1,4 @@
-"""Test the configured LLM provider (Ollama local or HF Space)."""
+"""Test the configured LLM provider."""
 
 import asyncio
 import sys
@@ -6,16 +6,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.ai.providers import get_llm_provider
-from app.config import settings
+from app.ai.providers import get_llm_provider, get_provider_info
 
 
 async def main() -> None:
-    print(f"Provider: {settings.llm_provider}")
-    if settings.llm_provider == "hf_space":
-        print(f"URL: {settings.llm_base_url}")
-    else:
-        print(f"Ollama: {settings.ollama_base_url} / {settings.ollama_model}")
+    info = get_provider_info()
+    print(f"Provider: {info['llm_provider']}")
+    print(f"Model:    {info['model']}")
+    print(f"Endpoint: {info['endpoint']}")
 
     provider = get_llm_provider()
     text, meta = await provider.generate(
@@ -23,7 +21,7 @@ async def main() -> None:
         max_tokens=32,
     )
     print(f"\nResponse: {text}")
-    print(f"Model: {meta.model} | {meta.inference_ms}ms | provider={meta.provider}")
+    print(f"Provider: {meta.provider} | Model: {meta.model} | {meta.inference_ms}ms")
 
 
 if __name__ == "__main__":
