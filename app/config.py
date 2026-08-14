@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     ollama_model: str = "qwen2.5:3b"
 
     cors_origins: str = "http://localhost:3000"
+    cors_origin_regex: str = r"https://.*\.vercel\.app"
 
 
 settings = Settings()

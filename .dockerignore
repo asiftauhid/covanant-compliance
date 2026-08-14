@@ -1,0 +1,16 @@
+.git
+.github
+.covenat_monitor
+.venv
+venv
+frontend
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+.DS_Store
+*.md
+samples/*.pdf
+frontend/node_modules
+frontend/.next

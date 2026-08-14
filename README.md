@@ -179,6 +179,39 @@ Neon's idle connection drops.
 inference server to host. Set `LLM_PROVIDER=ollama` to run the whole stack
 locally with no third-party API.
 
+### Deploy for free
+
+You already have Neon. Use **Render** (API, free web service) and **Vercel**
+(Next.js UI, free). First request after idle can take ~1 minute while Render
+wakes up.
+
+**1. Push this repo to GitHub** (if it is not already up to date).
+
+**2. API on Render**
+
+1. Go to [render.com/new/blueprint](https://render.com/new/blueprint) and
+   connect `covanant-compliance`.
+2. Apply `render.yaml`. Choose the **Free** instance.
+3. Set these environment variables:
+
+| Variable | Value |
+|----------|--------|
+| `DATABASE_URL` | your Neon connection string |
+| `OPENAI_API_KEY` | your OpenAI key |
+| `CORS_ORIGINS` | `https://YOUR-APP.vercel.app` (add after step 3) |
+
+4. Copy the API URL, e.g. `https://covenant-compliance-api.onrender.com`.
+
+**3. UI on Vercel**
+
+1. Import the same GitHub repo at [vercel.com/new](https://vercel.com/new).
+2. Set **Root Directory** to `frontend`.
+3. Add `NEXT_PUBLIC_API_URL` = the Render URL (no trailing slash).
+4. Deploy. Then paste the Vercel URL into Render `CORS_ORIGINS` and redeploy
+   the API (Vercel `*.vercel.app` hosts are also allowed by default).
+
+Open the Vercel URL. The first covenant check may be slow while Render spins up.
+
 ## Sample data
 
 10 UAE-style borrowers with July 2026 snapshots, seeded to produce a mix of
