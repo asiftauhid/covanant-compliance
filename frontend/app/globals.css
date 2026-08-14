@@ -43,6 +43,12 @@ details > summary .disclosure {
   transition: transform 120ms ease;
 }
 
-details[open] > summary .disclosure {
-  transform: rotate(90deg);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 0.7s linear infinite;
 }

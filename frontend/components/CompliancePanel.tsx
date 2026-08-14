@@ -49,6 +49,75 @@ function summarize(results: CovenantAnalysisItem[]) {
   return counts;
 }
 
+function Spinner() {
+  return (
+    <span
+      className="spinner inline-block h-3 w-3 shrink-0 rounded-full border border-neutral-300 border-t-neutral-800"
+      aria-hidden
+    />
+  );
+}
+
+function DoneMark() {
+  return (
+    <span
+      className="inline-flex h-3 w-3 shrink-0 items-center justify-center text-[9px] leading-none text-emerald-700"
+      aria-hidden
+    >
+      ✓
+    </span>
+  );
+}
+
+function AnalysisProgress({ period }: { period: string }) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    const timers = [
+      window.setTimeout(() => setPhase(1), 2200),
+      window.setTimeout(() => setPhase(2), 5500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const steps = [
+    "Extracting covenants from the PDF",
+    `Pulling figures for ${period}`,
+    "Evaluating each covenant",
+  ];
+
+  return (
+    <div className="px-4 py-8">
+      <p className="text-[13px] text-neutral-700">Running check…</p>
+      <ol className="mt-4 space-y-3">
+        {steps.map((label, index) => {
+          const done = index < phase;
+          const current = index === phase;
+          return (
+            <li key={label} className="flex items-center gap-2.5 text-[12px]">
+              {done ? <DoneMark /> : current ? <Spinner /> : (
+                <span className="inline-block h-3 w-3 shrink-0 rounded-full border border-neutral-200" aria-hidden />
+              )}
+              <span
+                className={
+                  current
+                    ? "text-neutral-800"
+                    : done
+                      ? "text-neutral-500"
+                      : "text-neutral-400"
+                }
+              >
+                {label}
+                {current ? "…" : ""}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 function CovenantResult({ item }: { item: CovenantAnalysisItem }) {
   const { evaluation } = item.check;
 
@@ -377,14 +446,7 @@ export default function CompliancePanel() {
             </ul>
           </>
         ) : running ? (
-          <div className="px-4 py-8">
-            <p className="text-[13px] text-neutral-700">Running analysis…</p>
-            <ol className="mt-3 space-y-1.5 text-[12px] text-neutral-500">
-              <li>1. Extracting covenants from the PDF</li>
-              <li>2. Pulling the borrower&apos;s figures for {period}</li>
-              <li>3. Evaluating each covenant</li>
-            </ol>
-          </div>
+          <AnalysisProgress period={period} />
         ) : (
           <div className="px-4 py-8">
             <p className="text-[13px] text-neutral-700">Ready to check</p>

@@ -108,10 +108,9 @@ export default function ChatPanel() {
       <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
         {messages.length === 0 ? (
           <div>
-            <p className="text-[13px] text-neutral-700">Ask about the borrower data</p>
+            <p className="text-[13px] text-neutral-700">Ask anything about the borrower data</p>
             <p className="mt-1 text-[12px] text-neutral-500">
-              Questions are answered from the tables on the left — including lookups by
-              borrower name.
+              Questions are answered based on the data look-ups from the tables on the left.
             </p>
             <ul className="mt-4 space-y-2">
               {SUGGESTIONS.map((suggestion) => (
