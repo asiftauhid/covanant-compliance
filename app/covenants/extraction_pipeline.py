@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from app.ai.covenant_extractor import extract_covenants
 from app.covenants.schemas import CovenantRule
 from app.documents.pdf_parser import extract_text_from_pdf
+from app.errors import public_error
 
 
 class ExtractionResult(BaseModel):
@@ -24,12 +25,12 @@ async def extract_covenants_from_pdf(content: bytes) -> ExtractionResult:
     try:
         text = extract_text_from_pdf(content)
     except Exception as exc:
-        return ExtractionResult(error=f"Could not read PDF: {exc}")
+        return ExtractionResult(error=f"Could not read PDF: {public_error(exc)}")
 
     try:
         covenants, meta = await extract_covenants(text)
     except Exception as exc:
-        return ExtractionResult(text_chars=len(text), error=f"Covenant extraction failed: {exc}")
+        return ExtractionResult(text_chars=len(text), error=f"Covenant extraction failed: {public_error(exc)}")
 
     return ExtractionResult(
         covenants=covenants,

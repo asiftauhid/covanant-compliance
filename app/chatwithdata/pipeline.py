@@ -12,6 +12,7 @@ from app.chatwithdata.schema_context import build_chat_schema
 from app.chatwithdata.schemas import ChatMessage, ChatTurnResult
 from app.chatwithdata.sql_review import sql_covers_constraints
 from app.covenants.retrieval_pipeline import retrieve_data
+from app.errors import public_error
 
 
 def _history_for_prompt(history: list[ChatMessage]) -> list[dict[str, str]]:
@@ -147,10 +148,10 @@ async def chat_with_data(
         )
     except Exception as exc:
         return ChatTurnResult(
-            answer=f"I retrieved data but could not form an answer: {exc}",
+            answer=f"I retrieved data but could not form an answer: {public_error(exc)}",
             sql=combined_sql,
             rows=all_rows,
-            error=str(exc),
+            error=public_error(exc),
         )
 
     return ChatTurnResult(

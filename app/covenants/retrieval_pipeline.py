@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.sql_generator import generate_sql
 from app.database.sql_executor import SQLValidationError, execute_sql
+from app.errors import public_error
 
 MAX_ATTEMPTS = 2
 
@@ -54,8 +55,8 @@ async def retrieve_data(
                 model=meta.model,
             )
         except (SQLValidationError, ValueError) as exc:
-            error = str(exc)
+            error = public_error(exc)
         except Exception as exc:
-            error = f"Retrieval failed: {exc}"
+            error = f"Retrieval failed: {public_error(exc)}"
 
     return RetrievalResult(intent=intent, sql=sql, error=error)

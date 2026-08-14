@@ -32,14 +32,32 @@ function tableLabel(name: string) {
   return TABLE_LABELS[name] ?? name.replaceAll("_", " ");
 }
 
+function Spinner({ label }: { label: string }) {
+  return (
+    <div
+      className="flex items-center gap-2 px-4 py-8 text-[12px] text-neutral-400"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        className="spinner inline-block h-3.5 w-3.5 shrink-0 rounded-full border border-neutral-300 border-t-neutral-800"
+        aria-hidden
+      />
+      {label}
+    </div>
+  );
+}
+
 export default function DataPanel() {
   const [tables, setTables] = useState<TableSummary[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [data, setData] = useState<TableData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tablesLoading, setTablesLoading] = useState(true);
 
   const loading = active !== null && data?.table !== active;
   const activeMeta = tables.find((table) => table.name === active);
+  const showSpinner = !error && (tablesLoading || loading);
 
   useEffect(() => {
     fetchTables()
@@ -47,7 +65,8 @@ export default function DataPanel() {
         setTables(rows);
         setActive((current) => current ?? rows[0]?.name ?? null);
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setTablesLoading(false));
   }, []);
 
   useEffect(() => {
@@ -71,6 +90,15 @@ export default function DataPanel() {
     <div className="flex min-h-0 flex-1 flex-col bg-white">
       <div className="flex shrink-0 items-end justify-between gap-3 border-b border-neutral-200 px-4">
         <div className="flex items-center gap-1 overflow-x-auto">
+          {tablesLoading && (
+            <span className="flex items-center gap-2 px-3 py-2.5 text-[12px] text-neutral-400">
+              <span
+                className="spinner inline-block h-3 w-3 shrink-0 rounded-full border border-neutral-300 border-t-neutral-800"
+                aria-hidden
+              />
+              Loading…
+            </span>
+          )}
           {tables.map((table) => {
             const selected = table.name === active;
             return (
@@ -144,10 +172,10 @@ export default function DataPanel() {
           </table>
         )}
 
-        {loading && !error && (
-          <p className="px-4 py-6 text-[12px] text-neutral-400">Loading table…</p>
+        {showSpinner && (
+          <Spinner label={tablesLoading ? "Loading data…" : "Loading table…"} />
         )}
-        {!loading && !error && tables.length === 0 && (
+        {!showSpinner && !error && tables.length === 0 && (
           <p className="px-4 py-6 text-[12px] text-neutral-400">
             No readable tables yet.
           </p>
