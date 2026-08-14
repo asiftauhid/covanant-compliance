@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -69,6 +70,12 @@ class CheckRequest(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     history: list[ChatMessage] = []
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    """Render's public URL hits /, which is not an API route — send people to the docs."""
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health")

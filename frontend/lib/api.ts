@@ -8,10 +8,21 @@ import type {
   TableSummary,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
+  /\/$/,
+  "",
+);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
+  const url = `${API_URL}${path}`;
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch {
+    throw new Error(
+      `Could not reach the API at ${API_URL}. If this is the hosted UI, set NEXT_PUBLIC_API_URL to your Render URL (no trailing slash) and redeploy.`,
+    );
+  }
 
   if (!response.ok) {
     let detail = response.statusText || "Request failed";
