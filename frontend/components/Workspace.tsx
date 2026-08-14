@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import CompliancePanel from "@/components/CompliancePanel";
 import DataPanel from "@/components/DataPanel";
-import { fetchHealth } from "@/lib/api";
+import RightPanel from "@/components/RightPanel";
 
 const MIN_PCT = 24;
 const MAX_PCT = 72;
@@ -29,14 +28,7 @@ export default function Workspace() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [leftPct, setLeftPct] = useState(DEFAULT_PCT);
   const [dragging, setDragging] = useState(false);
-  const [provider, setProvider] = useState<string | null>(null);
   const split = useSplitLayout();
-
-  useEffect(() => {
-    fetchHealth()
-      .then((health) => setProvider(`${health.llm_provider} · ${health.model}`))
-      .catch(() => setProvider("api offline"));
-  }, []);
 
   const clamp = (value: number) => Math.min(MAX_PCT, Math.max(MIN_PCT, value));
 
@@ -48,12 +40,15 @@ export default function Workspace() {
   }, []);
 
   return (
-    <div className="flex h-dvh flex-col bg-neutral-50 text-neutral-900">
-      <header className="flex shrink-0 items-baseline gap-3 border-b border-neutral-200 bg-white px-4 py-2.5">
-        <h1 className="text-[13px] font-medium">Covenant Compliance Monitor</h1>
-        <span className="text-[11px] text-neutral-400">
-          {provider ?? "connecting…"}
-        </span>
+    <div className="flex h-dvh flex-col bg-[#f7f7f5] text-neutral-900">
+      <header className="shrink-0 border-b border-neutral-200/80 bg-white px-5 py-3">
+        <h1 className="text-[14px] font-medium tracking-tight">
+          Covenant Compliance
+        </h1>
+        <p className="mt-0.5 text-[11px] text-neutral-400">
+          Browse borrower data on the left; check covenants or chat with data on the
+          right
+        </p>
       </header>
 
       <div
@@ -94,15 +89,20 @@ export default function Workspace() {
             if (event.key === "ArrowRight") setLeftPct((pct) => clamp(pct + 2));
           }}
           title="Drag to resize · double-click to reset"
-          className={`group relative hidden w-px shrink-0 border-0 bg-neutral-200 md:block ${
+          className={`group relative hidden w-px shrink-0 bg-neutral-200 md:block ${
             dragging ? "bg-neutral-400" : "hover:bg-neutral-400"
-          } focus-visible:bg-neutral-500 focus-visible:outline-none`}
+          } focus-visible:bg-neutral-500`}
         >
-          <span className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+          <span className="absolute inset-y-0 -left-1.5 -right-1.5 cursor-col-resize" />
+          <span
+            className={`absolute top-1/2 left-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-300 opacity-0 transition-opacity group-hover:opacity-100 ${
+              dragging ? "opacity-100 bg-neutral-400" : ""
+            }`}
+          />
         </div>
 
         <section className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-neutral-200 md:border-t-0">
-          <CompliancePanel />
+          <RightPanel />
         </section>
       </div>
     </div>

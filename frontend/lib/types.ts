@@ -45,6 +45,7 @@ export interface EvaluationResult {
   actual: number | null;
   status: ComplianceStatus;
   inputs: Record<string, number>;
+  formula?: string | null;
   currency?: string | null;
   difference?: number | null;
   reason?: string | null;
@@ -86,4 +87,16 @@ export interface HealthResponse {
   llm_provider: string;
   model: string;
   endpoint: string;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatTurnResult {
+  answer: string;
+  sql?: string | null;
+  rows?: Record<string, Cell>[];
+  error?: string | null;
 }

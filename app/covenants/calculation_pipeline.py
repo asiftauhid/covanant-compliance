@@ -32,37 +32,40 @@ def _echoed_data_faithfully(claimed: FinancialData, actual_data: FinancialData) 
 
 def _resolve_actual(
     payload: dict, data: FinancialData, *, allow_unverified: bool
-) -> tuple[float | None, FinancialData, str | None]:
+) -> tuple[float | None, FinancialData, str | None, str | None]:
     """
     Evaluate the model's formula against the database values, never against the
     numbers it echoed back, so a hallucinated input cannot become a verdict.
 
     With allow_unverified (the final attempt) its own number is accepted as a
     fallback, but only when every value it echoed matches the database.
+
+    Returns (actual, used_inputs, error, formula).
     """
-    formula = payload.get("formula")
+    raw_formula = payload.get("formula")
+    formula = raw_formula.strip() if isinstance(raw_formula, str) and raw_formula.strip() else None
     claimed = numeric_map(payload.get("inputs"))
     used = {name: data[name] for name in claimed if name in data} or data
     formula_error: str | None = None
 
-    if isinstance(formula, str) and formula.strip():
+    if formula:
         try:
-            return round(apply_formula(formula, data), 4), used, None
+            return round(apply_formula(formula, data), 4), used, None, formula
         except (ValueError, SyntaxError, ZeroDivisionError, OverflowError) as exc:
             formula_error = f"Formula evaluation failed: {exc}"
 
     if payload.get("error"):
-        return None, used, str(payload["error"])
+        return None, used, str(payload["error"]), formula
 
     actual = to_float(payload.get("actual"))
     if actual is None:
-        return None, used, formula_error or "LLM returned no usable formula or value"
+        return None, used, formula_error or "LLM returned no usable formula or value", formula
     if not _echoed_data_faithfully(claimed, data):
-        return None, used, "LLM reported values that do not match the retrieved data"
+        return None, used, "LLM reported values that do not match the retrieved data", formula
     if not allow_unverified:
-        return None, used, formula_error or "LLM returned no verifiable formula"
+        return None, used, formula_error or "LLM returned no verifiable formula", formula
 
-    return round(actual, 4), used, None
+    return round(actual, 4), used, None, formula
 
 
 async def run_calculation(rule: CovenantRule, data: FinancialData) -> CalculationResult:
@@ -78,6 +81,7 @@ async def run_calculation(rule: CovenantRule, data: FinancialData) -> Calculatio
 
     error: str | None = None
     previous = ""
+    last_formula: str | None = None
 
     for attempt in range(MAX_ATTEMPTS):
         fix_context = (previous, error) if attempt and error else None
@@ -89,20 +93,28 @@ async def run_calculation(rule: CovenantRule, data: FinancialData) -> Calculatio
                 metric=rule.metric,
                 actual=None,
                 inputs=available,
+                formula=last_formula,
                 error=f"Calculation failed: {exc}",
             )
 
         previous = str(payload)
-        actual, used, error = _resolve_actual(
+        actual, used, error, formula = _resolve_actual(
             payload, available, allow_unverified=attempt == MAX_ATTEMPTS - 1
         )
+        last_formula = formula or last_formula
 
         if actual is not None:
-            return CalculationResult(metric=rule.metric, actual=actual, inputs=used)
+            return CalculationResult(
+                metric=rule.metric,
+                actual=actual,
+                inputs=used,
+                formula=last_formula,
+            )
 
     return CalculationResult(
         metric=rule.metric,
         actual=None,
         inputs=available,
+        formula=last_formula,
         error=error or "LLM could not compute the covenant value",
     )

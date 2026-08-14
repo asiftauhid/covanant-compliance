@@ -5,7 +5,44 @@
   --font-mono: var(--font-geist-mono);
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
+  margin: 0;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  color: #171717;
+  background: #fafafa;
+}
+
+::selection {
+  background: #e5e5e5;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="separator"]:focus-visible {
+  outline: 1.5px solid #a3a3a3;
+  outline-offset: 1px;
+}
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary .disclosure {
+  display: inline-block;
+  transition: transform 120ms ease;
+}
+
+details[open] > summary .disclosure {
+  transform: rotate(90deg);
 }

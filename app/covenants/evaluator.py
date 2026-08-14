@@ -32,6 +32,7 @@ def evaluate_actual(
     actual: float,
     inputs: dict[str, float],
     warning_buffer: float = DEFAULT_WARNING_BUFFER,
+    formula: str | None = None,
 ) -> EvaluationResult:
     """Compare a pre-computed actual value against the covenant threshold."""
     return EvaluationResult(
@@ -43,6 +44,7 @@ def evaluate_actual(
         actual=round(actual, 4),
         status=_evaluate_status(actual, rule.threshold, rule.operator, warning_buffer),
         inputs=inputs,
+        formula=formula,
         currency=rule.currency,
         difference=round(actual - rule.threshold, 4),
     )
@@ -53,6 +55,7 @@ def undetermined(
     status: ComplianceStatus,
     reason: str | None,
     inputs: dict[str, float] | None = None,
+    formula: str | None = None,
 ) -> EvaluationResult:
     """Result for covenants that could not be measured — never a guessed verdict."""
     return EvaluationResult(
@@ -64,6 +67,7 @@ def undetermined(
         actual=None,
         status=status,
         inputs=inputs or {},
+        formula=formula,
         currency=rule.currency,
         reason=reason,
     )
@@ -81,6 +85,6 @@ async def evaluate(
 
     if calc.actual is None:
         status: ComplianceStatus = "insufficient_data" if not calc.inputs else "manual_review"
-        return undetermined(rule, status, calc.error, calc.inputs)
+        return undetermined(rule, status, calc.error, calc.inputs, calc.formula)
 
-    return evaluate_actual(rule, calc.actual, calc.inputs, warning_buffer)
+    return evaluate_actual(rule, calc.actual, calc.inputs, warning_buffer, calc.formula)

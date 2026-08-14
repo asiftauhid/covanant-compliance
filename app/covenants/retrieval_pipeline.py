@@ -1,7 +1,7 @@
 """
 Pipeline 1 — retrieval.
 
-  intent  →  LLM SELECT  →  guardrails  →  PostgreSQL rows
+  intent  →  LLM SELECT (JOINs / aggregates OK)  →  guardrails  →  PostgreSQL rows
 """
 
 import asyncio
@@ -25,7 +25,12 @@ class RetrievalResult(BaseModel):
     error: str | None = None
 
 
-async def retrieve_data(db: Session, intent: str) -> RetrievalResult:
+async def retrieve_data(
+    db: Session,
+    intent: str,
+    *,
+    schema_context: str | None = None,
+) -> RetrievalResult:
     """Generate and run a SELECT for the intent, retrying once with the error as feedback."""
     sql: str | None = None
     error: str | None = None
@@ -34,7 +39,11 @@ async def retrieve_data(db: Session, intent: str) -> RetrievalResult:
         fix_context = (sql, error) if attempt and sql and error else None
 
         try:
-            sql, meta = await generate_sql(intent, fix_context=fix_context)
+            sql, meta = await generate_sql(
+                intent,
+                fix_context=fix_context,
+                schema_context=schema_context,
+            )
             # Sync driver: run the query off the event loop so parallel checks keep moving.
             rows = await asyncio.to_thread(execute_sql, db, sql)
             return RetrievalResult(

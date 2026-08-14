@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.providers import get_llm_provider, get_provider_info
 from app.ai.providers.http_client import close_client
+from app.chatwithdata import ChatMessage, chat_with_data
 from app.config import settings
 from app.covenants.compliance_pipeline import analyze_loan_agreement, check_compliance
 from app.covenants.extraction_pipeline import extract_covenants_from_pdf
@@ -60,6 +61,11 @@ class RetrieveRequest(BaseModel):
 class CheckRequest(BaseModel):
     covenant: CovenantRule
     intent: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+    history: list[ChatMessage] = []
 
 
 @app.get("/health")
@@ -141,6 +147,15 @@ async def retrieve_data_endpoint(body: RetrieveRequest, db: Session = Depends(ge
     """Pipeline 1: natural language → LLM SQL → guarded execution."""
     result = await retrieve_data(db, body.intent)
     if result.error:
+        raise HTTPException(status_code=422, detail=result.error)
+    return result
+
+
+@app.post("/chatwithdata")
+async def chat_with_data_endpoint(body: ChatRequest, db: Session = Depends(get_db)):
+    """Ask a question over borrower data: retrieve rows, then answer from them."""
+    result = await chat_with_data(db, body.question, body.history)
+    if result.error and not result.answer:
         raise HTTPException(status_code=422, detail=result.error)
     return result
 

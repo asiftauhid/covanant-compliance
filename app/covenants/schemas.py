@@ -28,6 +28,7 @@ class CalculationResult(BaseModel):
     metric: str
     actual: float | None
     inputs: dict[str, float]
+    formula: str | None = None
     error: str | None = None
 
 
@@ -40,6 +41,7 @@ class EvaluationResult(BaseModel):
     actual: float | None
     status: ComplianceStatus
     inputs: dict[str, float] = Field(default_factory=dict)
+    formula: str | None = None
     currency: str | None = None
     difference: float | None = None
     reason: str | None = None

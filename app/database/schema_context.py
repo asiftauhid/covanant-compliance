@@ -7,18 +7,26 @@ borrowers
   industry (text)
 
 financial_snapshots         one row per borrower per month
-  borrower_id (text)        e.g. 'borrower_001'
+  borrower_id (text)        FK → borrowers.id, e.g. 'borrower_001'
   period_start (date)       first day of the month, e.g. '2026-07-01'
   period_end (date)         first day of the next month, e.g. '2026-08-01'
   revenue, ebitda, net_operating_income, cash_balance,
   current_assets, current_liabilities, total_debt, debt_service   (all numeric)
 
-Example — values for borrower_001, period 2026-07:
+Example — values for one borrower and period (no JOIN needed):
   SELECT net_operating_income, debt_service
   FROM financial_snapshots
   WHERE borrower_id = 'borrower_001'
     AND period_start = '2026-07-01'
     AND period_end = '2026-08-01'
+  LIMIT 100
+
+Example — look up by borrower name (JOIN allowed):
+  SELECT b.name, f.total_debt, f.cash_balance
+  FROM financial_snapshots f
+  JOIN borrowers b ON b.id = f.borrower_id
+  WHERE b.name = 'ABC Trading LLC'
+    AND f.period_start = '2026-07-01'
   LIMIT 100
 """.strip()
 

@@ -1,5 +1,7 @@
 import type {
   Borrower,
+  ChatMessage,
+  ChatTurnResult,
   HealthResponse,
   LoanAnalysisResult,
   TableData,
@@ -58,6 +60,14 @@ export function analyzeLoanAgreement(
   return request<LoanAnalysisResult>("/covenants/analyze", {
     method: "POST",
     body,
+  });
+}
+
+export function chatWithData(question: string, history: ChatMessage[]) {
+  return request<ChatTurnResult>("/chatwithdata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, history }),
   });
 }
 

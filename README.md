@@ -30,13 +30,15 @@ Anything the system cannot verify returns `insufficient_data` or `manual_review`
 covenant-compliance/
 ├── app/
 │   ├── ai/                 # Provider switch, prompts, JSON + formula parsing
+│   ├── chatwithdata/       # NL Q&A over borrower tables
 │   ├── covenants/          # Pipelines, evaluator, domain schemas
 │   ├── database/           # Models, session, SQL guardrails, schema prompt
 │   ├── documents/          # PDF text extraction
 │   └── main.py             # FastAPI endpoints
 ├── frontend/
 │   ├── app/                # Next.js routes, fonts, base styles
-│   ├── components/         # Workspace split, data browser, covenant panel
+│   ├── components/         # Workspace, data browser, covenant + chat panels
+│   │   └── chatwithdata/   # Chat with data UI
 │   └── lib/                # API client + shared types
 ├── scripts/                # Seed data, pipeline tests, sample PDF generator
 └── samples/                # Sample loan agreement PDF
@@ -84,8 +86,9 @@ npm run dev
 
 Demo UI: http://localhost:3000
 
-The window is a two-pane workspace: the database tables on the left, the
-covenant check on the right, with a divider you can drag between them
+The window is a two-pane workspace: the database tables on the left, and on the
+right either **Covenant check** or **Chat with data**, with a divider you can
+drag between them
 (double-click to reset). Below 900px the panes stack.
 
 Upload `samples/loan_agreement_sample.pdf`, pick **borrower_001**, period
@@ -105,6 +108,7 @@ SQL that fetched them.
 | POST | `/covenants/analyze` | PDF + borrower + period → full analysis |
 | POST | `/covenants/check` | Single covenant + retrieval intent |
 | POST | `/data/retrieve` | Pipeline 1 only (NL → SQL → rows) |
+| POST | `/chatwithdata` | Ask a question over borrower data |
 
 ## Test scripts
 
@@ -143,8 +147,9 @@ provider interface.
 **Trust boundary.** The LLM decides *what* to measure and *how*; Python decides
 the verdict. Nothing a model asserts is taken at face value:
 
-- Generated SQL must pass guardrails — SELECT only, whitelisted tables, single
-  table (no JOINs), no aggregates or `GROUP BY`, and an enforced `LIMIT 100`
+- Generated SQL must pass guardrails — SELECT only, whitelisted tables
+  (`borrowers`, `financial_snapshots`), JOINs and aggregates allowed when needed,
+  no `UNION` / writes, and an enforced `LIMIT 100`
 - The calculation step returns a formula, which is re-evaluated in Python
   against the values the database returned. Models state the formula more
   reliably than they do the arithmetic, and one test run had a model report
