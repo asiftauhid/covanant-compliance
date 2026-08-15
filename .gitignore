@@ -19,3 +19,5 @@ postgres_data/
 frontend/node_modules/
 frontend/.next/
 frontend/.env.local
+
+CONTEXT.md

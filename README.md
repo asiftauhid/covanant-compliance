@@ -1,127 +1,160 @@
-# Loan Covenant Monitor
+# Loan Covenant Monitor and Chat With Database
 
-Upload a loan agreement PDF, pick a borrower and month, and see whether each covenant is **compliant**, **warning**, or **breached**. Ask questions about the borrower data in plain English.
+Upload a loan agreement PDF, pick a borrower and month, and see whether each covenant is **compliant**, **warning**, or **breached**. Also ask questions about the borrowers data in plain English.
 
-**Stack:** Next.js · FastAPI · PostgreSQL (Neon) · OpenAI or Ollama
+**Live demo:** [UI](https://covenant-compliance-bice.vercel.app) · [API docs](https://covenant-compliance-api.onrender.com/docs) · [Health](https://covenant-compliance-api.onrender.com/health)
 
-The LLM extracts covenants, writes SQL, and picks formulas. Python runs the SQL guardrails, evaluates the math, and decides the verdict — nothing unverified is reported as fact.
+**Stack:** Next.js · FastAPI · PostgreSQL (Neon) · OpenAI or Ollama (For Personal Deployment)
+
+---
+
+## Features
+
+|                    | What it does                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| **Covenant check** | PDF → extract covenants → construct formula → fetch financial da → compute metrics → status + audit trail |
+| **Ask the data**   | Natural-language questions over `borrowers` and `financial_snapshots` data from DB                        |
+| **Trust boundary** | LLM proposes structure/SQL/formulas and Python owns guardrails, math, and verdicts                        |
 
 ---
 
 ## Architecture
 
 ```mermaid
+%%{init: {"flowchart": {"htmlLabels": false, "nodeSpacing": 24, "rankSpacing": 28}, "themeVariables": {"fontSize": "12px"}}}%%
 flowchart LR
-  UI[Next.js UI]
-  API[FastAPI]
-  DB[(PostgreSQL)]
-  LLM[OpenAI / Ollama]
+  UI["Next.js"]
+  API["FastAPI"]
+  DB[("Postgres")]
+  LLM["OpenAI / Ollama"]
 
-  UI <-->|REST| API
-  API <-->|SQL| DB
-  API <-->|prompts| LLM
+  UI <-->|"REST"| API
+  API <-->|"SQL"| DB
+  API <-->|"prompts"| LLM
+
+  classDef box fill:#f8fafc,stroke:#94a3b8,color:#0f172a,rx:6,ry:6
+  class UI,API,LLM box
 ```
 
 ### Covenant check
 
 ```mermaid
-flowchart TB
-  PDF[Loan PDF]
-  P0[Extract covenants\nLLM]
-  P1[Generate SQL\nLLM + guardrails]
-  DB[(Database)]
-  P2[Formula\nLLM → Python eval]
-  P3[Verdict\nPython]
-  OUT[Results + audit trail]
+%%{init: {"flowchart": {"htmlLabels": false, "nodeSpacing": 18, "rankSpacing": 22}, "themeVariables": {"fontSize": "11px"}}}%%
+flowchart LR
+  PDF["PDF"] --> P0["Extract<br/>LLM"]
+  P0 --> P1["SQL<br/>LLM + guard"]
+  P1 --> DB[("DB")]
+  DB --> P2["Formula<br/>LLM → Python"]
+  P2 --> P3["Verdict<br/>Python"]
+  P3 --> OUT["Results"]
 
-  PDF --> P0 --> P1 --> DB --> P2 --> P3 --> OUT
+  classDef llm fill:#eff6ff,stroke:#60a5fa,color:#1e3a8a
+  classDef py fill:#ecfdf5,stroke:#34d399,color:#064e3b
+  classDef io fill:#f8fafc,stroke:#94a3b8,color:#0f172a
+  class P0,P1,P2 llm
+  class P3 py
+  class PDF,OUT io
 ```
 
-Each covenant runs **P1 → P2 → P3** in parallel. Guardrails: SELECT only, whitelisted tables, `LIMIT 100`.
+The model extracts covenants, drafts SQL, and suggests formulas. Python validates SQL, evaluates the math on real data, and decides the status, so nothing unverified is reported as fact.
 
-### Ask the data (chat)
+For each covenant runs **SQL → formula → verdict** in parallel. Guardrails: `SELECT` only, tables `borrowers` / `financial_snapshots`, `LIMIT 100`.
+
+### Ask the data
 
 ```mermaid
-flowchart TB
-  Q[User question]
-  PLAN[Plan intents + filters\nLLM]
-  SQL[Generate SQL\nLLM + guardrails + review]
-  DB[(Database)]
-  ANS[Answer from rows\nLLM]
+%%{init: {"flowchart": {"htmlLabels": false, "nodeSpacing": 18, "rankSpacing": 22}, "themeVariables": {"fontSize": "11px"}}}%%
+flowchart LR
+  Q["Question"] --> PLAN["Plan<br/>LLM"]
+  PLAN --> SQL["SQL<br/>+ review"]
+  SQL --> DB[("DB")]
+  DB --> ANS["Answer<br/>from rows"]
 
-  Q --> PLAN --> SQL --> DB --> ANS
+  classDef llm fill:#eff6ff,stroke:#60a5fa,color:#1e3a8a
+  classDef io fill:#f8fafc,stroke:#94a3b8,color:#0f172a
+  class PLAN,SQL,ANS llm
+  class Q io
 ```
 
-Answers use only retrieved rows. Filters from the question must appear in the SQL.
+The planner turns the question into intents and filters. SQL is generated, checked against those filters, then executed. The answer is narrated only from retrieved rows from the DB.
 
 ---
 
 ## Run locally
 
-```bash
-# Backend
-python -m venv .covenat_monitor && source .covenat_monitor/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # set DATABASE_URL, OPENAI_API_KEY
-python scripts/seed_database.py
-python -m uvicorn app.main:app --reload
+**Prerequisites:** Python 3.11+, Node 18+, a Postgres URL (e.g. [Neon](https://neon.tech)), and an OpenAI key (or a local [Ollama](https://ollama.com) model).
 
-# Frontend (new terminal)
-cd frontend && cp .env.local.example .env.local && npm install && npm run dev
+### 1. Backend
+
+```bash
+python -m venv .covenat_monitor
+source .covenat_monitor/bin/activate   # Windows: .covenat_monitor\Scripts\activate
+
+pip install -r requirements.txt
+cp .env.example .env                   # set DATABASE_URL and OPENAI_API_KEY
+
+python scripts/seed_database.py
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-- UI: http://localhost:3000  
-- API docs: http://localhost:8000/docs  
+API: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-Use `samples/loan_agreement_sample.pdf`, **borrower_001**, period **2026-07**.
+### 2. Frontend (new terminal)
 
----
+```bash
+cd frontend
+cp .env.local.example .env.local       # NEXT_PUBLIC_API_URL=http://localhost:8000
+npm install
+npm run dev
+```
 
-## Deploy (free)
+UI: [http://localhost:3000](http://localhost:3000)
 
-| Part | Host | URL you open |
-|------|------|----------------|
-| UI | [Vercel](https://vercel.com) — root dir `frontend` | Your Vercel app |
-| API | [Render](https://render.com) — use `render.yaml` | Backend only (not the website) |
+### Try the demo
 
-**Vercel:** `NEXT_PUBLIC_API_URL=https://your-api.onrender.com` (no trailing slash) → redeploy.
-
-**Render:** `DATABASE_URL`, `OPENAI_API_KEY`, `CORS_ORIGINS=https://your-app.vercel.app`
-
-Render free tier sleeps after ~15 min idle; first request may take ~1 minute.
+Use `samples/loan_agreement_sample.pdf` with any borrower and period **`2026-07`**.
 
 ---
 
 ## Environment
 
-| Backend (`.env`) | Purpose |
-|------------------|---------|
-| `DATABASE_URL` | Postgres connection |
-| `OPENAI_API_KEY` | LLM (when `LLM_PROVIDER=openai`) |
-| `LLM_PROVIDER` | `openai` (default) or `ollama` |
-| `CORS_ORIGINS` | Frontend URL(s), comma-separated |
+### Backend (`.env`)
 
-| Frontend (`.env.local`) | Purpose |
-|-------------------------|---------|
+| Variable                           | Purpose                                                  |
+| ---------------------------------- | -------------------------------------------------------- |
+| `DATABASE_URL`                     | Postgres connection string                               |
+| `OPENAI_API_KEY`                   | Required when `LLM_PROVIDER=openai`                      |
+| `LLM_PROVIDER`                     | `openai` (default) or `ollama` (for personal deployment) |
+| `OPENAI_MODEL`                     | Default `gpt-4o-mini`                                    |
+| `CORS_ORIGINS`                     | Frontend origin(s), comma-separated                      |
+| `OLLAMA_BASE_URL` / `OLLAMA_MODEL` | Used when `LLM_PROVIDER=ollama`                          |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable              | Purpose          |
+| --------------------- | ---------------- |
 | `NEXT_PUBLIC_API_URL` | FastAPI base URL |
 
 ---
 
 ## Main API routes
 
-| Path | What it does |
-|------|----------------|
-| `POST /covenants/analyze` | PDF + borrower + period → full check |
-| `POST /chatwithdata` | Question over borrower data |
-| `GET /tables`, `/borrowers` | Data browser |
-| `GET /health` | Status check |
+| Method | Path                        | Purpose                                         |
+| ------ | --------------------------- | ----------------------------------------------- |
+| `POST` | `/covenants/analyze`        | PDF + borrower + period → full compliance check |
+| `POST` | `/chatwithdata`             | Question over borrower data                     |
+| `GET`  | `/borrowers`                | List borrowers                                  |
+| `GET`  | `/tables`, `/tables/{name}` | Browse whitelisted tables                       |
+| `GET`  | `/health`                   | Status + LLM provider info                      |
 
 ---
 
-## LaTeX diagrams
+## Project layout
 
-For a PDF/portfolio figure, compile `docs/pipeline-architecture.tex` and add the image to the README if you prefer TikZ over Mermaid.
-
-## License
-
-MIT
+```text
+app/           FastAPI — covenants, chat, SQL guardrails, LLM providers
+frontend/      Next.js UI
+scripts/       Seed data + pipeline smoke tests
+samples/       Demo loan agreement PDF
+alembic/       DB migrations
+```
