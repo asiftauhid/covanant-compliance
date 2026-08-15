@@ -8,7 +8,8 @@ import type {
   TableSummary,
 } from "./types";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
+// Empty string must not win over the default (?? only treats null/undefined).
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(
   /\/$/,
   "",
 );
@@ -36,7 +37,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       // Non-JSON error body; keep the status text.
     }
-    throw new Error(detail);
+    throw new Error(`${response.status} ${detail} — ${url}`);
   }
 
   return response.json() as Promise<T>;
