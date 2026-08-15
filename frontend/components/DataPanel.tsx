@@ -32,18 +32,21 @@ function tableLabel(name: string) {
   return TABLE_LABELS[name] ?? name.replaceAll("_", " ");
 }
 
-function Spinner({ label }: { label: string }) {
+function Spinner({ label, hint }: { label: string; hint?: string }) {
   return (
     <div
-      className="flex items-center gap-2 px-4 py-8 text-[12px] text-neutral-400"
+      className="flex flex-col gap-1.5 px-4 py-8 text-[12px] text-neutral-400"
       role="status"
       aria-live="polite"
     >
-      <span
-        className="spinner inline-block h-3.5 w-3.5 shrink-0 rounded-full border border-neutral-300 border-t-neutral-800"
-        aria-hidden
-      />
-      {label}
+      <div className="flex items-center gap-2">
+        <span
+          className="spinner inline-block h-3.5 w-3.5 shrink-0 rounded-full border border-neutral-300 border-t-neutral-800"
+          aria-hidden
+        />
+        {label}
+      </div>
+      {hint && <p className="pl-[22px] text-[11px] leading-snug text-neutral-400">{hint}</p>}
     </div>
   );
 }
@@ -173,7 +176,14 @@ export default function DataPanel() {
         )}
 
         {showSpinner && (
-          <Spinner label={tablesLoading ? "Loading data…" : "Loading table…"} />
+          <Spinner
+            label={tablesLoading ? "Loading data…" : "Loading table…"}
+            hint={
+              tablesLoading
+                ? "The free deployment on Render can have a cold start, so it might be a bit slower."
+                : undefined
+            }
+          />
         )}
         {!showSpinner && !error && tables.length === 0 && (
           <p className="px-4 py-6 text-[12px] text-neutral-400">

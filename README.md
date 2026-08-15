@@ -1,10 +1,10 @@
 # Loan Covenant Monitor and Chat With Database
 
-Upload a loan agreement PDF, pick a borrower and month, and see whether each covenant is **compliant**, **warning**, or **breached**. Also ask questions about the borrowers data in plain English.
+Upload a loan agreement PDF with covenant points, pick a borrower and month, and see whether each covenant is **compliant**, **warning**, or **breached**. Also ask questions about the borrowers data in plain English.
 
 **Live demo:** [UI](https://covenant-compliance-bice.vercel.app) · [API docs](https://covenant-compliance-api.onrender.com/docs) · [Health](https://covenant-compliance-api.onrender.com/health)
 
-**Stack:** Next.js · FastAPI · PostgreSQL (Neon) · OpenAI or Ollama (For Personal Deployment)
+**Stack:** Next.js · FastAPI · PostgreSQL (Neon) · OpenAI or Qwen (For Personal Deployment)
 
 ---
 
@@ -26,7 +26,7 @@ flowchart LR
   UI["Next.js"]
   API["FastAPI"]
   DB[("Postgres")]
-  LLM["OpenAI / Ollama"]
+  LLM["OpenAI / Qwen"]
 
   UI <-->|"REST"| API
   API <-->|"SQL"| DB
@@ -42,7 +42,7 @@ flowchart LR
 %%{init: {"flowchart": {"htmlLabels": false, "nodeSpacing": 18, "rankSpacing": 22}, "themeVariables": {"fontSize": "11px"}}}%%
 flowchart LR
   PDF["PDF"] --> P0["Extract Covenants<br/>(LLM)"]
-  P0 --> P1["SQL<br/>(LLM + guard)"]
+  P0 --> P1["SQL<br/>(LLM + guardrails)"]
   P1 --> DB[("DB")]
   DB --> P2["Formula<br/>(LLM → Python)"]
   P2 --> P3["Verdict<br/>(Python)"]
